@@ -1,31 +1,26 @@
 package cc.takacs.php_codeverage_display.display;
 
 import cc.takacs.php_codeverage_display.clover.FileCoverage;
+import cc.takacs.php_codeverage_display.clover.LineCoverage;
 import cc.takacs.php_codeverage_display.config.ConfigValues;
-import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.event.DocumentEvent;
 import com.intellij.openapi.editor.event.DocumentListener;
-import com.intellij.openapi.editor.markup.HighlighterTargetArea;
-import com.intellij.openapi.editor.markup.MarkupModel;
-import com.intellij.openapi.editor.markup.RangeHighlighter;
-import com.intellij.openapi.editor.markup.TextAttributes;
 
-import java.awt.*;
-import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * @author Zsolt Takacs <zsolt@takacs.cc>
  */
 public class CoverageDisplay implements DocumentListener {
-    private Editor editor;
     private FileCoverage fileCoverage;
-    private ArrayList<RangeHighlighter> highlights;
+    private CoverageHighlighter coverageHighlighter;
+    private ConfigValues configValues;
 
-    public CoverageDisplay(Editor editor) {
-        this.editor = editor;
+    public CoverageDisplay(Editor editor, ConfigValues configValues) {
+        this.configValues = configValues;
         fileCoverage = new FileCoverage();
-        highlights = new ArrayList<RangeHighlighter>();
+        coverageHighlighter = new CoverageHighlighter(editor, configValues);
     }
 
     public void setFileCoverage(FileCoverage fileCoverage) {
@@ -42,39 +37,44 @@ public class CoverageDisplay implements DocumentListener {
     public synchronized void redraw() {
         clear();
 
-        Document document = this.editor.getDocument();
+        if (fileCoverage.hasLines()) {
+            int firstLineNumber = fileCoverage.getKeys().iterator().next();
+            boolean lastLineWasExecuted = fileCoverage.getLine(firstLineNumber).isExecuted();
+            int lastDifferentLine = firstLineNumber;
+            int lastLineNumber = firstLineNumber - 1;
+            int lastLineExecuted = fileCoverage.getLine(firstLineNumber).getExecuted();
 
-        for (int line : fileCoverage.getCoveredLines()) {
-            highlightLine(document, ConfigValues.getInstance().getCoveredColor(), line);
-        }
-        for (int line : fileCoverage.getUncoveredLines()) {
-            highlightLine(document, ConfigValues.getInstance().getUncoveredColor(), line);
-        }
-    }
+            Iterator<Integer> iterator = fileCoverage.getKeys().iterator();
+            while (iterator.hasNext()) {
+                int lineNumber = iterator.next();
+                LineCoverage lineCoverage = fileCoverage.getLine(lineNumber);
 
-    private void highlightLine(Document document, Color color, int line) {
-        if (line <= document.getLineCount()) {
-            int lineStartOffset = document.getLineStartOffset(line - 1);
-            int lineEndOffset = document.getLineEndOffset(line - 1);
+                if (lineCoverage.isExecuted() != lastLineWasExecuted || lastLineNumber != lineNumber - 1) {
+                    if (lastLineWasExecuted) {
+                        this.coverageHighlighter.highlightLines(configValues.getCoveredColor(), lastDifferentLine, lastLineNumber, lastLineExecuted);
+                    } else {
+                        this.coverageHighlighter.highlightLines(configValues.getUncoveredColor(), lastDifferentLine, lastLineNumber, lastLineExecuted);
+                    }
 
-            TextAttributes attributes = new TextAttributes();
-            attributes.setBackgroundColor(color);
+                    lastLineExecuted = lineCoverage.getExecuted();
+                    lastDifferentLine = lineNumber;
+                    lastLineWasExecuted = lineCoverage.isExecuted();
+                }
 
-            RangeHighlighter lineHighlighter = this.editor.getMarkupModel().addRangeHighlighter(
-                    lineStartOffset, lineEndOffset, 3333, attributes, HighlighterTargetArea.LINES_IN_RANGE
-            );
+                lastLineNumber = lineNumber;
 
-            highlights.add(lineHighlighter);
+                if (!iterator.hasNext()) {
+                    if (lastLineWasExecuted) {
+                        this.coverageHighlighter.highlightLines(configValues.getCoveredColor(), lastDifferentLine, lastLineNumber, lastLineExecuted);
+                    } else {
+                        this.coverageHighlighter.highlightLines(configValues.getUncoveredColor(), lastDifferentLine, lastLineNumber, lastLineExecuted);
+                    }
+                }
+            }
         }
     }
 
     private void clear() {
-        MarkupModel model = editor.getMarkupModel();
-
-        for (RangeHighlighter rangeHighlighter : highlights) {
-            model.removeHighlighter(rangeHighlighter);
-        }
-
-        highlights.clear();
+        coverageHighlighter.clear();
     }
 }

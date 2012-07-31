@@ -1,9 +1,21 @@
-<idea-plugin version="2">
+<idea-plugin version="2" url="https://github.com/oker1/phpunit_codecoverage_display">
     <name>PHPUnit code coverage</name>
     <description>Displays PHPUnit code coverage of file in the editor.</description>
-    <version>0.0.4</version>
-    <vendor>Zsolt Takacs</vendor>
+    <version>0.2.2</version>
+    <vendor email="zsolt@takacs.cc" url="https://github.com/oker1/phpunit_codecoverage_display">Zsolt Takacs</vendor>
     <idea-version since-build="107.120"/>
+
+    <change-notes>
+        <![CDATA[
+<html>
+<h2>Changelog:</h2>
+<h3>v0.2.2</h3>
+<ul>
+<li>PhpStorm 4 compatibility fix</li>
+</ul>
+</html>
+        ]]>
+    </change-notes>
 
     <depends>com.intellij.modules.platform</depends>
 
@@ -11,6 +23,10 @@
     </application-components>
 
     <project-components>
+        <component>
+            <implementation-class>cc.takacs.php_codeverage_display.config.ConfigValues</implementation-class>
+            <interface-class>cc.takacs.php_codeverage_display.config.ConfigValues</interface-class>
+        </component>
         <component>
             <implementation-class>cc.takacs.php_codeverage_display.ProjectPlugin</implementation-class>
             <interface-class>cc.takacs.php_codeverage_display.ProjectPlugin</interface-class>
